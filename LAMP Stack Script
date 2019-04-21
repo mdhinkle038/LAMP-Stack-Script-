@@ -1,0 +1,83 @@
+#!/bin/bash
+
+#Write the script then complete these comannds first
+#cd /home
+#vi /home/bash
+#chmod +x /home/bash
+#./bash
+
+#Configures the date to avoid errors.
+timedatectl set-time "2019-04-03 17:02:00"
+timedatectl set-timezone America/New_York
+
+
+#Installs apache, mariaDB,
+yum install httpd -y
+yum install mariadb-server mariadb -y
+
+
+#echos a file so mariaDB/mysql can be updated
+echo "# MariaDB 10.3 CentOS repository list - created 2018-11-19 23:14 UTC" > /etc/yum.repos.d/maria10-3.repo
+echo "# http://downloads.mariadb.org/mariadb/repositories/" >> /etc/yum.repos.d/maria10-3.repo
+echo "[mariadb]" >> /etc/yum.repos.d/maria10-3.repo
+echo "name = MariaDB" >> /etc/yum.repos.d/maria10-3.repo
+echo "baseurl = http://yum.mariadb.org/10.3/centos7-amd64" >> /etc/yum.repos.d/maria10-3.repo
+echo "gpgkey=https://yum.mariadb.org/RPM-GPG-KEY-MariaDB" >> /etc/yum.repos.d/maria10-3.repo
+echo "gpgcheck=1" >> /etc/yum.repos.d/maria10-3.repo
+
+
+#Installs php(dependencies), updates mariaDB/mysql, updates php, installs wget command, 
+yum upgrade maria* -y
+yum install php -y
+yum install epel-release yum-utils  -y
+yum install http://rpms.remirepo.net/enterprise/remi-release-7.rpm -y
+yum-config-manager --enable remi-php72 
+yum install php php-common php-opcache php-mcrypt php-cli php-gd php-curl php-mysql -y
+yum install wget -y
+
+
+#Starts and Enables Services
+systemctl start httpd
+systemctl enable httpd
+systemctl start mariadb
+systemctl enable mariadb
+systemctl restart mariadb
+
+
+#Configures firewall settings 
+firewall-cmd --permanent --zone=trusted --add-port=3306/tcp
+firewall-cmd --zone=public --add-port=80/tcp --permanent
+firewall-cmd --reload
+
+
+#Creates an index.html file for a html webpage.
+echo "<html> Whomever was here! </html>" > /var/www/html/index.html
+
+
+#These are the commands that need to be used to set up database:
+#CREATE DATABASE wordpress;
+#GRANT ALL PRIVILEGES ON wordpress.* TO wordpressuser@localhost IDENTIFIED BY 'password123';
+#FLUSH PRIVILEGES;
+#exit
+mysql -u root -p
+
+
+#Downloads the zipped file, unzips it, moves the wordpress dir, writes the properties of wordpress.
+cd ~
+wget http://wordpress.org/latest.tar.gz
+tar -zxvf latest.tar.gz
+mv wordpress/ /var/www/html/
+chown -R apache:apache /var/www/html/wordpress/
+chcon -Rv --type=httpd_sys_rw_content_t /var/www/html/wordpress
+
+#Go into this file and locate DocumentRoot "/var/www/html"
+#Add to the end of the line:
+#/wordpress
+vi /etc/httpd/conf/httpd.conf
+
+
+#Restarts and shows the status of Apache/mariaDB
+systemctl status httpd
+systemctl status mariadb
+systemctl restart httpd
+systemctl restart mariadb
